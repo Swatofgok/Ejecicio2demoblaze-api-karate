@@ -1,0 +1,32 @@
+<!DOCTYPE HTML>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Karate Timeline</title>
+    <style>
+      body, html { font-family: arial, sans-serif; font-size: 11pt; }
+      #visualization { box-sizing: border-box; width: 100%; height: 300px; }
+      .vis-item.failed { background-color: #F2928C; }
+      .page-heading { padding: 0.5em; margin-bottom: 0.5em; background-color: lightcyan; border: 1px solid gray; }
+    </style>
+    <script src="res/vis.min.js"></script>
+    <link href="res/vis.min.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    <div class="page-heading">
+      <a href="karate-summary.html">Summary</a>
+    </div>     
+    <div id="visualization"></div>
+    <script>
+var groups = [{"content":"main","id":1}];
+var items = [{"id":1,"group":1,"content":"demoblaze\/login[1:16]","start":1795194742969,"end":1795194743977,"title":"demoblaze\/login[1:16] 12:12:22.969-12:12:23.977 Caso 3 - Usuario y password correctos"},{"id":2,"group":1,"content":"demoblaze\/login[2.1:41]","start":1795194743988,"end":1795194744835,"title":"demoblaze\/login[2.1:41] 12:12:23.988-12:12:24.835 Caso 4 - Credenciales incorrectas: password incorrecto"},{"id":3,"group":1,"content":"demoblaze\/login[2.2:42]","start":1795194744845,"end":1795194745666,"title":"demoblaze\/login[2.2:42] 12:12:24.845-12:12:25.666 Caso 4 - Credenciales incorrectas: usuario no existente"},{"id":4,"group":1,"content":"demoblaze\/signup[1:11]","start":1795194738198,"end":1795194741315,"title":"demoblaze\/signup[1:11] 12:12:18.198-12:12:21.315 Caso 1 - Crear un nuevo usuario"},{"id":5,"group":1,"content":"demoblaze\/signup[2:22]","start":1795194741334,"end":1795194742141,"title":"demoblaze\/signup[2:22] 12:12:21.334-12:12:22.141 Caso 2 - Intentar crear un usuario ya existente"}];
+</script>
+    <script>
+      var container = document.getElementById('visualization');
+      var timeline = new vis.Timeline(container);
+      timeline.setOptions({groupOrder: 'content'});
+      timeline.setGroups(new vis.DataSet(groups));
+      timeline.setItems(new vis.DataSet(items));
+    </script>
+  </body>
+</html>

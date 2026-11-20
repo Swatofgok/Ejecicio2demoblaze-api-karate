@@ -1,0 +1,89 @@
+CONCLUSIONES - PRUEBAS API DEMOBLAZE (SIGNUP / LOGIN)
+=====================================================
+
+Herramienta: Karate 1.5.1 (JUnit5, Maven, Java 17+)
+Resultado de la ejecucion: 5 escenarios ejecutados, 5 exitosos, 0 fallidos.
+Evidencia: reportes/karate-reports/karate-summary.html y reportes/karate.log
+
+1. ENTRADAS Y SALIDAS POR CASO
+------------------------------
+Todas las peticiones: POST, Content-Type: application/json
+Cuerpo: { "username": "<texto>", "password": "<password en Base64>" }
+
+Caso 1 - Crear un nuevo usuario (POST /signup)
+  Entrada : {"username":"qa_user_<timestamp>","password":"VGVzdDEyMzQ="}
+  Salida  : HTTP 200 - body: ""   (string JSON vacio)
+
+Caso 2 - Crear un usuario ya existente (POST /signup)
+  Entrada : el mismo username del registro previo
+  Salida  : HTTP 200 - body: {"errorMessage":"This user already exist."}
+
+Caso 3 - Login con usuario y password correctos (POST /login)
+  Entrada : {"username":"qa_login_<timestamp>","password":"VGVzdDEyMzQ="}
+  Salida  : HTTP 200 - body: "Auth_token: <token>"
+
+Caso 4a - Login con password incorrecto (POST /login)
+  Entrada : {"username":"qa_login_<timestamp>","password":"TWFsYTk5OQ=="}
+  Salida  : HTTP 200 - body: {"errorMessage":"Wrong password."}
+
+Caso 4b - Login con usuario inexistente (POST /login)
+  Entrada : {"username":"no_qa_login_<timestamp>","password":"VGVzdDEyMzQ="}
+  Salida  : HTTP 200 - body: {"errorMessage":"User does not exist."}
+
+2. HALLAZGOS
+------------
+H1. Codigos HTTP no semanticos: la API responde HTTP 200 en todos los casos,
+    incluso en errores (usuario duplicado, password incorrecto, usuario
+    inexistente). Lo esperado seria 409 Conflict para usuario duplicado y
+    401 Unauthorized para credenciales invalidas. El cliente solo puede
+    detectar el error inspeccionando el campo "errorMessage" del body.
+
+H2. Formato de respuesta inconsistente: en exito devuelve un string JSON
+    ("" en signup, "Auth_token: ..." en login) y en error un objeto JSON
+    ({"errorMessage": ...}). Esto obliga a validar tipos distintos segun el
+    resultado (en Karate se comparo el texto crudo para los casos exitosos).
+
+H3. Enumeracion de usuarios: el login diferencia "Wrong password." de
+    "User does not exist.", y el signup informa "This user already exist.".
+    Un atacante puede descubrir que usuarios existen. Se recomienda un
+    mensaje generico ("Usuario o password invalidos").
+
+H4. Password solo codificado en Base64: Base64 no es cifrado; es reversible
+    trivialmente (VGVzdDEyMzQ= -> Test1234). La proteccion real depende
+    unicamente de HTTPS.
+
+H5. Token predecible: el token devuelto al decodificarlo en Base64 resulta
+    ser el username seguido de un sufijo numerico
+    (ej. cWFfbG9naW5f...  -> qa_login_1795194742974 + 1795794). En las
+    ejecuciones observadas el sufijo fue el mismo para usuarios distintos,
+    lo que sugiere que un token podria construirse conociendo solo el
+    username. Riesgo alto de suplantacion de sesion.
+
+H6. Sin politica de password visible: el servicio acepta el registro sin
+    exigir longitud/complejidad, y no se observo limite de intentos de
+    login (riesgo de fuerza bruta). No se hicieron pruebas de carga para
+    confirmarlo, por respeto al servicio publico.
+
+H7. Mensaje con error gramatical: "This user already exist." (deberia ser
+    "already exists").
+
+3. CONCLUSIONES
+---------------
+- Los dos servicios cumplen el flujo funcional basico: registran usuarios
+  nuevos, rechazan duplicados, autentican credenciales validas y rechazan
+  las invalidas. Los 4 casos solicitados se verificaron de forma automatica.
+- La API no sigue buenas practicas REST en codigos de estado ni en la
+  forma de sus respuestas, lo que complica su consumo y su validacion.
+- Existen debilidades de seguridad relevantes (enumeracion de usuarios,
+  password en Base64, token aparentemente derivado del username) que
+  deberian reportarse y priorizarse en un entorno real.
+- Las pruebas generan datos unicos por ejecucion, por lo que son
+  repetibles e independientes del estado previo de la base de datos.
+
+4. RECOMENDACIONES
+------------------
+- Usar 201/409 en signup y 200/401 en login.
+- Unificar respuestas en objetos JSON (ej. {"token": "..."} / {"error": "..."}).
+- Mensajes de error genericos en login.
+- Tokens aleatorios firmados (ej. JWT) con expiracion.
+- Politica de password y limitacion de intentos (rate limiting).
